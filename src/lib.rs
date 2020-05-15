@@ -1,6 +1,8 @@
-use std::sync::Mutex;
-use crate::blockingstack::StackError::{StackFull, StackEmpty};
 use std::cmp::{Ordering};
+use parking_lot::{Mutex, Condvar};
+use crate::StackError::{StackFull, StackEmpty};
+
+pub mod test;
 
 #[derive(thiserror::Error, Debug)]
 pub enum StackError {
@@ -61,28 +63,44 @@ impl<'a, T> Stack<'a, T> {
 
 
 pub struct BlockingStack<'a, T> {
-    stack: Mutex<Stack<'a, T>>
+    stack: Mutex<Stack<'a, T>>,
+    push: Condvar,
+    pop: Condvar
 }
 
 impl<'a, T> BlockingStack<'a, T> {
     pub fn new(max_size: usize) -> Self {
         Self {
-            stack: Mutex::new(Stack::new(max_size))
+            stack: Mutex::new(Stack::new(max_size)),
+            push: Condvar::new(),
+            pop: Condvar::new(),
         }
     }
 
     pub fn push(&self, item: &'a T) {
-        let mut stack = self.stack.lock().unwrap();
-        stack.contents.push(item)
+        let mut stack = self.stack.lock();
+        if stack.contents.len() >= stack.max_size {     // If full:
+            self.push.wait(&mut stack);     // Wait until pushable
+        }
+        else {
+            self.pop.notify_one();
+        }
+        stack.contents.push(item);
     }
 
     pub fn pop(&self) -> &'a T{
-        let mut stack = self.stack.lock().unwrap();
+        let mut stack = self.stack.lock();
+        if stack.contents.len() == 0 {                  // If empty
+            self.pop.wait(&mut stack);      // Wait until poppable
+        }
+        else {
+            self.push.notify_one();
+        }
         stack.pop().unwrap()
     }
 
     pub fn size(&self) -> usize {
-        let stack = self.stack.lock().unwrap();
+        let stack = self.stack.lock();
         stack.contents.len()
     }
 
@@ -91,7 +109,7 @@ impl<'a, T> BlockingStack<'a, T> {
     }
 
     pub fn clear(&self) {
-        let mut stack = self.stack.lock().unwrap();
+        let mut stack = self.stack.lock();
         stack.contents.clear()
     }
 }
