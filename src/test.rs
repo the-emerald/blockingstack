@@ -4,7 +4,7 @@ mod tests {
     use crate::BlockingStack;
     use std::sync::Arc;
     use std::thread::JoinHandle;
-    use std::thread;
+    use std::{thread};
 
     pub const MAX_STACK_SIZE: usize = 10;
     pub const DATA: [i32; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -52,5 +52,27 @@ mod tests {
         blocked_push.into_iter().map(|t| t.join().unwrap()).count();
 
         assert_eq!(9, stack.size());
+    }
+
+    #[test]
+    fn test_blocked_pop() {
+        let stack: Arc<BlockingStack<i32>> = Arc::new(BlockingStack::new(MAX_STACK_SIZE));
+        let mut blocked_pop: Vec<JoinHandle<()>> = Vec::new();
+        let mut push: Vec<JoinHandle<()>> = Vec::new();
+
+        for _x in 0..5 {
+            let s = stack.clone();
+            blocked_pop.push(thread_pop(s));
+        }
+
+        for y in DATA.iter() {
+            let s = stack.clone();
+            push.push(thread_push(s, y));
+        }
+
+        push.into_iter().map(|t| t.join().unwrap()).count();
+        blocked_pop.into_iter().map(|t| t.join().unwrap()).count();
+
+        assert_eq!(5, stack.size());
     }
 }
