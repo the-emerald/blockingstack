@@ -85,4 +85,42 @@ mod tests {
 
         assert_eq!(5, stack.size());
     }
+
+    #[test]
+    fn push_only() {
+        let stack: Arc<BlockingStack<i32>> = Arc::new(BlockingStack::new(MAX_STACK_SIZE));
+        let mut push: Vec<JoinHandle<()>> = Vec::new();
+        for x in DATA.iter() {
+            let s = stack.clone();
+            push.push(thread_push(s, x));
+        }
+        push.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
+    }
+
+    #[test]
+    fn push_pop_full() {
+        let stack: Arc<BlockingStack<i32>> = Arc::new(BlockingStack::new(MAX_STACK_SIZE));
+        let mut push: Vec<JoinHandle<()>> = Vec::new();
+        let mut pop: Vec<JoinHandle<()>> = Vec::new();
+
+        for x in DATA.iter() {
+            let s = stack.clone();
+            push.push(thread_push(s, x));
+        }
+
+        for _y in 0..MAX_STACK_SIZE {
+            let s = stack.clone();
+            pop.push(thread_pop(s));
+        }
+
+        pop.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
+
+        push.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
+    }
 }

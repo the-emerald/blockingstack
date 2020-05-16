@@ -20,7 +20,7 @@ pub struct Stack<'a, T> {
 impl<'a, T> Stack<'a, T> {
     pub fn new(max_size: usize) -> Self {
         Self {
-            contents: Vec::new(),
+            contents: Vec::with_capacity(max_size),
             max_size
         }
     }
@@ -86,7 +86,7 @@ impl<'a, T> BlockingStack<'a, T> {
         self.pop.notify_one();
     }
 
-    pub fn pop(&self) -> &'a T{
+    pub fn pop(&self) -> &'a T {
         let mut stack = self.pop.wait_while(
             self.stack.lock().unwrap(),
             |s| s.is_empty()
@@ -106,6 +106,7 @@ impl<'a, T> BlockingStack<'a, T> {
 
     pub fn clear(&self) {
         let mut stack = self.stack.lock().unwrap();
+        self.push.notify_all();
         stack.contents.clear()
     }
 }
