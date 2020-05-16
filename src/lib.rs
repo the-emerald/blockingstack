@@ -79,23 +79,23 @@ impl<'a, T> BlockingStack<'a, T> {
 
     pub fn push(&self, item: &'a T) {
         let mut stack = self.stack.lock();
-        if stack.contents.len() >= stack.max_size {     // If full:
-            self.push.wait(&mut stack);     // Wait until pushable
+        // If the stack is full
+        while stack.contents.len() >= stack.max_size {
+            // Wait until a spot is available
+            self.push.wait(&mut stack);
         }
-        else {
-            self.pop.notify_one();
-        }
-        stack.contents.push(item);
+        stack.push(item).unwrap();
+        self.pop.notify_one();
     }
 
     pub fn pop(&self) -> &'a T{
         let mut stack = self.stack.lock();
-        if stack.contents.len() == 0 {                  // If empty
-            self.pop.wait(&mut stack);      // Wait until poppable
+        // If the stack is empty
+        while stack.contents.is_empty() {
+            // Wait until the stack has >0 elements
+            self.pop.wait(&mut stack);
         }
-        else {
-            self.push.notify_one();
-        }
+        self.push.notify_one();
         stack.pop().unwrap()
     }
 
