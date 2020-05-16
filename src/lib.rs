@@ -1,6 +1,6 @@
 use std::cmp::{Ordering};
-use parking_lot::{Mutex, Condvar};
 use crate::StackError::{StackFull, StackEmpty};
+use std::sync::{Mutex, Condvar};
 
 pub mod test;
 
@@ -78,29 +78,25 @@ impl<'a, T> BlockingStack<'a, T> {
     }
 
     pub fn push(&self, item: &'a T) {
-        let mut stack = self.stack.lock();
-        // If the stack is full
-        while stack.contents.len() >= stack.max_size {
-            // Wait until a spot is available
-            self.push.wait(&mut stack);
-        }
+        let mut stack = self.stack.lock().unwrap();
+        stack = self.push
+            .wait_while(stack, |s| s.contents.len() >= s.max_size)
+            .unwrap();
         stack.push(item).unwrap();
         self.pop.notify_one();
     }
 
     pub fn pop(&self) -> &'a T{
-        let mut stack = self.stack.lock();
-        // If the stack is empty
-        while stack.contents.is_empty() {
-            // Wait until the stack has >0 elements
-            self.pop.wait(&mut stack);
-        }
+        let mut stack = self.stack.lock().unwrap();
+        stack = self.pop
+            .wait_while(stack, |s| s.is_empty())
+            .unwrap();
         self.push.notify_one();
         stack.pop().unwrap()
     }
 
     pub fn size(&self) -> usize {
-        let stack = self.stack.lock();
+        let stack = self.stack.lock().unwrap();
         stack.contents.len()
     }
 
@@ -109,7 +105,7 @@ impl<'a, T> BlockingStack<'a, T> {
     }
 
     pub fn clear(&self) {
-        let mut stack = self.stack.lock();
+        let mut stack = self.stack.lock().unwrap();
         stack.contents.clear()
     }
 }

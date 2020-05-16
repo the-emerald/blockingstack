@@ -13,14 +13,12 @@ mod tests {
     fn thread_push<T: Display + Sync>(stack: Arc<BlockingStack<'static, T>>, value: &'static T) -> JoinHandle<()> {
         thread::spawn(move || {
             stack.push(value);
-            println!("+ Pushed {}", value);
         })
     }
 
     fn thread_pop<T: Display + Sync>(stack: Arc<BlockingStack<'static, T>>) -> JoinHandle<()> {
         thread::spawn(move || {
-            let v = stack.pop();
-            println!("- Popped {}", v);
+            stack.pop();
         })
     }
 
@@ -36,7 +34,9 @@ mod tests {
             push.push(thread_push(s, x));
         }
 
-        push.into_iter().map(|t| t.join().unwrap()).count();
+        push.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
 
         for y in BLOCKED_DATA.iter() {
             let s = stack.clone();
@@ -48,8 +48,13 @@ mod tests {
             pop.push(thread_pop(s));
         }
 
-        pop.into_iter().map(|t| t.join().unwrap()).count();
-        blocked_push.into_iter().map(|t| t.join().unwrap()).count();
+        pop.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
+
+        blocked_push.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
 
         assert_eq!(9, stack.size());
     }
@@ -70,8 +75,13 @@ mod tests {
             push.push(thread_push(s, y));
         }
 
-        push.into_iter().map(|t| t.join().unwrap()).count();
-        blocked_pop.into_iter().map(|t| t.join().unwrap()).count();
+        push.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
+
+        blocked_pop.into_iter()
+            .map(|t| t.join().unwrap())
+            .count();
 
         assert_eq!(5, stack.size());
     }

@@ -6,4 +6,4 @@ Written in Rust. [Install it here!](https://www.rust-lang.org/tools/install)
 `cargo build --release`
 
 ## Run tests
-`cargo test --release -- --test-threads=1 --show-output`
+`cargo test --release -- --test-threads=1`
