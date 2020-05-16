@@ -78,19 +78,19 @@ impl<'a, T> BlockingStack<'a, T> {
     }
 
     pub fn push(&self, item: &'a T) {
-        let mut stack = self.stack.lock().unwrap();
-        stack = self.push
-            .wait_while(stack, |s| s.contents.len() >= s.max_size)
-            .unwrap();
+        let mut stack = self.push.wait_while(
+            self.stack.lock().unwrap(),
+            |s| s.contents.len() >= s.max_size
+        ).unwrap();
         stack.push(item).unwrap();
         self.pop.notify_one();
     }
 
     pub fn pop(&self) -> &'a T{
-        let mut stack = self.stack.lock().unwrap();
-        stack = self.pop
-            .wait_while(stack, |s| s.is_empty())
-            .unwrap();
+        let mut stack = self.pop.wait_while(
+            self.stack.lock().unwrap(),
+            |s| s.is_empty()
+        ).unwrap();
         self.push.notify_one();
         stack.pop().unwrap()
     }
